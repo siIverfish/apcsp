@@ -1,0 +1,30 @@
+x <- 5
+DISPLAY (x)
+
+PROCEDURE display_twice (value)
+{
+    DISPLAY(value)
+    DISPLAY(value)
+}
+
+PROCEDURE display_eight (value)
+{
+    PROCEDURE display_four (value)
+    {
+        display_twice (value)
+        display_twice (value)
+    }
+
+    display_four (value)
+    display_four (value)
+}
+
+y <- 8
+
+PROCEDURE add_one (x)
+{
+    x <- x + 1
+    RETURN (x)
+}
+
+y <- add_one(y)
