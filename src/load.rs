@@ -1,4 +1,5 @@
-use std::fs::read_to_string;
+use crate::basic_types::*;
+/* temporary -- for tests */ use std::fs::read_to_string;
 
 pub fn load_code(path: &str) -> String {
     read_to_string(path)
