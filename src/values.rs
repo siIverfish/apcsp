@@ -1,5 +1,5 @@
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Operation(Operation),
     String(String),
@@ -7,13 +7,13 @@ pub enum Value {
     Group(Vec<Value>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Operation {
     operator: Operator,
     args: (Option<Box<Value>>, Option<Box<Value>>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Operator {
     Not, And, Or,
     Eq, Neq, Gte, Lte, Lt, Gt,
@@ -48,7 +48,7 @@ impl Operator {
 
 }
 
-pub fn parse_value(value: &str) -> Vec<Value> { //Operation {
+pub fn parse_value(value: &str) -> Value {
     use Operator::*;
 
     let precedence: [Vec<Operator>; 5] = [
@@ -61,6 +61,7 @@ pub fn parse_value(value: &str) -> Vec<Value> { //Operation {
 
     let value = tokenize(value);
     let value = parse_parentheses(value);
+    let value = parse_operations(value, &precedence);
 
     value
 }
@@ -106,7 +107,7 @@ fn tokenize(string: &str) -> Vec<Value> {
 }
 
 fn parse_parentheses(values: Vec<Value>) -> Vec<Value> {
-    fn parse_parentheses_inner(mut values: &mut impl Iterator<Item = Value>) -> Vec<Value> {
+    fn parse_parentheses_inner(values: &mut impl Iterator<Item = Value>) -> Vec<Value> {
         let mut new_values: Vec<Value> = Vec::new(); // todo with capacity
 
         while let Some(value) = values.next() {
@@ -124,13 +125,25 @@ fn parse_parentheses(values: Vec<Value>) -> Vec<Value> {
     parse_parentheses_inner(&mut values_iter)
 }
 
-fn parse_operations(values: Vec<Value>, precedence: &[Vec<Operator>; 5]) -> Operation {
-    
+fn parse_operations(values: Vec<Value>, precedence: &[Vec<Operator>; 5]) -> Value {
+    println!("{:?}", values);
 
-    // for operator_set in precedence {
-    //     let operator_indeces = operator_set 
-    //         .map(|operator| )
-    // }
+    for operator_set in precedence {
+        let operator_indeces = operator_set 
+            .iter()
+            .for_each(|operator: &Operator| {
+                values
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, c)| c == &&Value::Operator(operator.clone()))
+                    .map(|(i, _)| i)
+                    .for_each(|index| {
+
+                    })
+            });
+        
+        println!("operator indeces: {:?}", operator_indeces.collect::<Vec<usize>>());
+    }
 
     todo!();
 }
