@@ -27,11 +27,9 @@ fn parse_line_tokens(line_tokens: &mut dyn Iterator<Item = LineToken>) -> Vec<Ba
             // procedure
             let Some((name, args)) = line
                 .strip_prefix("PROCEDURE ")
-                .unwrap()
-                .trim()
-                .strip_suffix(')')
-                .expect("malformed procedure")
-                .split_once('(')
+                .map(str::trim)
+                .and_then(|s| s.strip_suffix(')'))
+                .and_then(|s| s.split_once('('))
                 else { panic!("malformed procedure"); };
             
             let (name, args) = (name.trim().to_string(), args.trim().to_string());

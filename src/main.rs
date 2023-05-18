@@ -1,7 +1,7 @@
 // use apcsp::run;
 
 fn main() {
-    let tokens = apcsp::values::parse_value("(4 + 8 * (6 - 3)) / 4 = 7".into());
+    let tokens = apcsp::values::parse_value("foo(4 - 7, bar(8))");
 
     println!("{:#?}", tokens);
 }

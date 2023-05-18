@@ -11,14 +11,14 @@ pub fn code_to_lines(code: String) -> LineToken {
     parse_lines(&mut lines)
 }
 
-fn parse_lines(mut lines: &mut dyn Iterator<Item = &str>) -> LineToken {
+fn parse_lines(lines: &mut dyn Iterator<Item = &str>) -> LineToken {
     let mut line_tokens: Vec<LineToken> = Vec::new();
 
     while let Some(line) = lines.next() {
         match line.trim() {
             ""           => (),
             "}"          => return LineToken::Block(line_tokens),
-            "{"          => line_tokens.push( parse_lines(&mut lines) ),
+            "{"          => line_tokens.push( parse_lines(lines) ),
             line   => line_tokens.push( LineToken::Normal(line.to_string()) ),
         }
     }
