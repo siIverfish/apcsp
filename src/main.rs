@@ -1,3 +1,3 @@
 fn main() {
-    apcsp::run("./csp/control.csp");
+    apcsp::run("./csp/simple.csp");
 }

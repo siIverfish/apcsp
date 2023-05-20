@@ -5,7 +5,7 @@ pub(crate) fn parse_procedure_calls(values: Vec<Value>) -> Vec<Value> {
     let mut iter = values.into_iter().peekable();
 
     while let Some(value) = iter.next() {
-        if let Value::String(ref name) = value {
+        if let Value::RawLeaf(ref name) = value {
             if let Some(&Value::Group(_)) = iter.peek() {
                 // it's a procedure call!!
                 let Some(Value::Group(procedure_call_args)) = iter.next()

@@ -21,6 +21,7 @@ use lists::parse_list;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
     Raw(String),
+    RawLeaf(String),
     
     Operation {
         operator: Operator,
@@ -170,9 +171,9 @@ impl Value {
     /// 
     /// Will therefore only be called on leaf nodes in the AST.
     // note: clones too much
-    fn apply_to_all_strings(&self, func: &impl Fn(&Value) -> Value) -> Value {
+    fn apply_to_all_raw_leafs(&self, func: &impl Fn(&Value) -> Value) -> Value {
         self.apply_to_all(&|value| {
-            if let Value::String(_) = value {
+            if let Value::RawLeaf(_) = value {
                 func(value)
             } else {
                 value.clone()
@@ -211,13 +212,23 @@ fn tokenize(string: &str) -> Vec<Value> {
 
         // values (name, string, or number)
         let mut value: String = String::new();
-        while chars.peek().is_some_and(|c: &char| c.is_ascii_alphanumeric() || c == &'_') {
+        while chars.peek().is_some_and(|c: &char| c.is_ascii_alphanumeric() || c == &'_' ) {
             value.push(chars.next().unwrap());
             index += 1;
         }
 
+        if chars.peek().is_some_and(|c| c == &'"') {
+            value.push(chars.next().unwrap());
+            while !chars.peek().is_some_and(|c| c == &'"') {
+                value.push(chars.next().unwrap());
+                index += 1;
+            }
+            value.push(chars.next().expect("unterminated string literal?"));
+            index += 2;
+        }
+
         if !value.is_empty() {
-            tokens.push(Value::String(value));
+            tokens.push(Value::RawLeaf(value));
         } else {
             panic!("unexpected character: {:?}", chars.next().unwrap());
         }
