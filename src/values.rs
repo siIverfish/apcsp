@@ -119,7 +119,7 @@ pub enum Operator {
 }
 
 impl Operator {
-    const STR_TO_OPERATOR: [(&'static str, Operator); 20] = [
+    pub(crate) const STR_TO_OPERATOR: [(&'static str, Operator); 20] = [
         (",",   Operator::Comma),
         ("NOT", Operator::Not),
         ("AND", Operator::And),
@@ -175,6 +175,12 @@ fn parse_list(values: &Vec<Value>) -> Option<Value> {
                 } else {
                     valuess.last_mut().unwrap().push(value.clone());
                 }
+            }
+
+            // support trailing commas
+            // an extra comma would add an empty group to the end
+            if valuess.last().unwrap().is_empty() {
+                valuess.pop();
             }
     
             Value::Group(valuess
