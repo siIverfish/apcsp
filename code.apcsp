@@ -28,3 +28,12 @@ PROCEDURE add_one (x)
 }
 
 y <- add_one(y)
+
+IF (y > 10)
+{
+    DISPLAY (y)
+}
+ELSE
+{
+    DISPLAY (x)
+}

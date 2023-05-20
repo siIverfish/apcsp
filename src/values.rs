@@ -1,26 +1,108 @@
 use crate::basic_types::*;
+use crate::basics::BasicStatement;
 
 // todo: breakup large functions into smaller bits
+// todo: use more impls
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
-    Operation(Operation),
-    String(String),
+    Operation {
+        operator: Operator,
+        args: Vec<Value>,
+    },
+    Raw(String),
     Operator(Operator),
     Group(Vec<Value>),
     ProcedureCall { name: String, args: Vec<Value> },
+
+    I128(i128),
+    Name(String),
+    String(String),
 }
 
-// impl Value {
-//     fn unwrap_tree(&self) {
-//         let Value::G
-//     }
-// }
+pub fn to_values(statements: Vec<BasicStatement>) -> Vec<BasicStatement> {
+    statements
+        .into_iter()
+        .map(|statement| {
+            match statement {
+                BasicStatement::Assignment { name, value } => {
+                    BasicStatement::Assignment { name: name.parse(), value: value.parse() }
+                },
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Operation {
-    operator: Operator,
-    args: Vec<Value>,
+                BasicStatement::Procedure { name, args, code, value } => {
+                    BasicStatement::Procedure { name: name.parse(), args: args.parse(), code: to_values(code), value: value.parse() }
+                },
+
+                BasicStatement::Return { value } => {
+                    BasicStatement::Return { value: value.parse() }
+                }
+
+                BasicStatement::Control { kind, values, block } => {
+                    BasicStatement::Control { kind, values: values.into_iter().map(|v| Value::parse(&v)).collect::<Vec<_>>(), block: to_values(block) }
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
+impl Value {
+    pub fn parse(&self) -> Value {
+        let Value::Raw(string) = self
+            else { panic!("parse_raw_value must get a Value::Raw")};
+    
+        parse_value(&string)
+    }
+
+    // should? always return Value::String
+    // wish i could explicitly type that
+    // theres probably some way to
+    fn apply_to_all(&self, func: &impl Fn(&Value) -> Value) -> Value {
+        func(&match self {
+            &Value::Operation { ref args, ref operator, .. }  => {
+                Value::Operation { 
+                    operator: operator.clone(),
+                    args: args
+                        .iter()
+                        .map(|value| Value::apply_to_all(value, func))
+                        .map(|value| func(&value))
+                        .collect::<Vec<_>>()
+                    } 
+            }
+
+            &Value::Group(ref values) => {
+                Value::Group(
+                    values
+                        .iter()
+                        .map(|value| Value::apply_to_all(value, func))
+                        .map(|value| func(&value))
+                        .collect::<Vec<_>>()
+                )
+            }
+
+            &Value::ProcedureCall { ref name, ref args } => {
+                Value::ProcedureCall { name: 
+                    name.clone(), 
+                    args: args
+                        .iter()
+                        .map(|value| Value::apply_to_all(value, func))
+                        .map(|value| func(&value))
+                        .collect::<Vec<_>>()
+                 }
+            }
+
+            _ => self.clone()
+        })
+    }
+
+    fn apply_to_all_strings(&self, func: &impl Fn(&Value) -> Value) -> Value {
+        self.apply_to_all(&|value| {
+            if let Value::String(_) = value {
+                func(value)
+            } else {
+                value.clone()
+            }
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -31,11 +113,13 @@ pub enum Operator {
     Add, Sub,
     Mul, Div, Mod,
     Pow,
+
     OpenParen, CloseParen,
+    OpenBracket, CloseBracket
 }
 
 impl Operator {
-    const STR_TO_OPERATOR: [(&'static str, Operator); 18] = [
+    const STR_TO_OPERATOR: [(&'static str, Operator); 20] = [
         (",",   Operator::Comma),
         ("NOT", Operator::Not),
         ("AND", Operator::And),
@@ -50,35 +134,57 @@ impl Operator {
         ("-",   Operator::Sub),
         ("*",   Operator::Mul),
         ("/",   Operator::Div),
-        ("%",   Operator::Mod),
+        ("MOD", Operator::Mod),
         ("^",   Operator::Pow),
         ("(",   Operator::OpenParen),
         (")",   Operator::CloseParen),
+        ("[",   Operator::OpenBracket),
+        ("]",   Operator::CloseBracket),
     ];
 
 }
 
-// todo delegate the precedence vec to something else
 pub fn parse_value(value: &str) -> Value {
-    use Operator::*;
-
-    let precedence: [Vec<Operator>; 5] = [
-        vec![Pow],
-        vec![Mul, Div],
-        vec![Add, Sub],
-        vec![Eq, Neq, Lte, Gte, Gt, Lt],
-        vec![And, Not, Or],
-    ];
-
     let value = tokenize(value);
+
+    parse_tokenized_value(value)
+}
+
+fn parse_tokenized_value(value: Vec<Value>) -> Value {
+    if let Some(value) = parse_list(&value) { return value; };
+    
     let value = parse_parentheses(value);
-
-    println!("{value:?}\n\n\n\n");
-
     let value = parse_procedure_calls(value);
-    let value = parse_operations(value, &precedence);
+    let value      = parse_operations(value);
+    let value      = parse_string_types(value);
+    let value      = flatten_single_vecs(value);
 
     value
+}
+
+fn parse_list(values: &Vec<Value>) -> Option<Value> {
+    use Operator::*;
+
+    if let &[Value::Operator(OpenBracket), .., Value::Operator(CloseBracket)] = values.as_slice() {
+        Some({
+            let mut valuess: Vec<Vec<Value>> = vec![Vec::new()];
+    
+            for value in values[1..values.len() - 1].iter() {
+                if let &Value::Operator(Comma) = value {
+                    valuess.push(Vec::new());
+                } else {
+                    valuess.last_mut().unwrap().push(value.clone());
+                }
+            }
+    
+            Value::Group(valuess
+                .into_iter()
+                .map(|values| parse_tokenized_value(values))
+                .collect::<Vec<_>>())
+        })
+    } else {
+        None
+    }
 }
 
 // im pretty sure this code is kinda godawful
@@ -190,19 +296,32 @@ fn parse_procedure_calls(values: Vec<Value>) -> Vec<Value> {
     new_values
 }
 
+fn parse_operations(values: Vec<Value>) -> Value {
+    use Operator::*;
 
-fn parse_operations(values: Vec<Value>, precedence: &[Vec<Operator>; 5]) -> Value {
+    let precedence: [Vec<Operator>; 5] = [
+        vec![Pow],
+        vec![Mul, Div],
+        vec![Add, Sub],
+        vec![Eq, Neq, Lte, Gte, Gt, Lt],
+        vec![And, Not, Or],
+    ];
+
+    parse_operations_inner(values, &precedence)
+}
+
+fn parse_operations_inner(values: Vec<Value>, precedence: &[Vec<Operator>; 5]) -> Value {
     let values: Vec<Value> = values
         .into_iter()
         .map(|value| {
             if let Value::Group(more_values) = value {
-                parse_operations(more_values, precedence)
+                parse_operations_inner(more_values, precedence)
             } else if let Value::ProcedureCall { name, args } = value {
                 Value::ProcedureCall { name, args: args
                     .into_iter()
                     .map(|value| {
                         if let Value::Group(values) = value {
-                            parse_operations(values, precedence)
+                            parse_operations_inner(values, precedence)
                         } else {
                             value
                         }
@@ -245,14 +364,47 @@ fn parse_operations(values: Vec<Value>, precedence: &[Vec<Operator>; 5]) -> Valu
         // handle special case: NOT, which takes only 1 argument.
         // there's certainly a better solution for this.
         // i should probably make `args` a vector
-        let right_side = parse_operations(values[operator_index+1..].to_vec(), precedence);
+        let right_side = parse_operations_inner(values[operator_index+1..].to_vec(), precedence);
     
-        Value::Operation(Operation { operator: found_operator.unwrap(), args: [right_side].to_vec()})
+        Value::Operation { operator: found_operator.unwrap(), args: [right_side].to_vec()}
     } else {
         // normal execution 
-        let left_side  = parse_operations(values[  ..operator_index].to_vec(), precedence);
-        let right_side = parse_operations(values[operator_index+1..].to_vec(), precedence);
+        let left_side  = parse_operations_inner(values[  ..operator_index].to_vec(), precedence);
+        let right_side = parse_operations_inner(values[operator_index+1..].to_vec(), precedence);
     
-        Value::Operation(Operation { operator: found_operator.unwrap(), args: [left_side, right_side].to_vec()})
+        Value::Operation { operator: found_operator.unwrap(), args: [left_side, right_side].to_vec()}
     }
+}
+
+fn flatten_single_vecs(value: Value) -> Value {
+    value.apply_to_all(&|value| {
+        match value {
+            &Value::Group(ref values) => {
+                if values.len() == 1 {
+                    values[0].clone()
+                } else {
+                    value.clone()
+                }
+            },
+
+            _ => value.clone(),
+        }
+    })
+}
+
+fn parse_string_types(value: Value) -> Value {
+    value.apply_to_all_strings(&|value| {
+        let Value::String(value) = value 
+            else { unreachable!("apply_to_all should only give Value::Strings or other non-Value-containing types."); };
+
+        if let Ok(int_value) = str::parse::<i128>(value) {
+            Value::I128(int_value)
+        } else if let Some(string_value) = value.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+            Value::String(string_value.into())
+        } else if value.chars().all(|c| c.is_alphabetic() || c == '_' ) {
+            Value::Name(value.into())
+        } else {
+            panic!("could not understand value: {value:?}");
+        }
+    })
 }
