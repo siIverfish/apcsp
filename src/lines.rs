@@ -1,5 +1,3 @@
-
-
 #[derive(Debug)]
 pub enum LineToken {
     Normal(String),
@@ -14,18 +12,23 @@ pub fn code_to_lines(code: String) -> LineToken {
 fn is_incomplete(line: &str) -> bool {
     use crate::values::Operator;
 
-    if line.chars().filter(|c| c == &'(').count() != 
-        line.chars().filter(|c| c == &')').count()
-    { true } 
-    else if line.chars().filter(|c| c == &'[').count() != 
-            line.chars().filter(|c| c == &']').count()
-    { true } 
-    else if Operator::STR_TO_OPERATOR.iter().map(|t| t.0).any(|operator| !"[]()".contains(operator) && line.ends_with(operator)) 
-    { true } 
-    else 
-    { false }
+    // literally no idea how to format this
+    
+    line.chars().filter(|c| c == &'(').count() != 
+    line.chars().filter(|c| c == &')').count()
+        ||
+    line.chars().filter(|c| c == &'[').count() != 
+    line.chars().filter(|c| c == &']').count()
+        ||
+    Operator::STR_TO_OPERATOR
+        .iter()
+        .map(|t| t.0)
+        .any(|operator| !"[]()".contains(operator) && line.ends_with(operator)) 
 }
 
+/// Makes a simple iterator of `&str`s into `LineTokens`, which are then consumed and turned into `BasicStatement`s by other functions.
+/// 
+/// 
 fn parse_lines(lines: &mut dyn Iterator<Item = &str>) -> LineToken {
     let mut line_tokens: Vec<LineToken> = Vec::new();
 
