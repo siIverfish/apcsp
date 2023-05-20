@@ -4,8 +4,9 @@ another Advanced Principles Computer Science Principles Psuedocode interpreter, 
 
 ### basic stuff:
 
-- [x] parsing: check
-- [ ] interpreting: none (@yavko's fault)
+- [x] parsing: badly
+- [ ] interpreting: doesn't (@yavko's fault)
+- [ ] full apcsp-only web framework: ha (probably also @yavko's fault)
 
 ### Usage:
 
