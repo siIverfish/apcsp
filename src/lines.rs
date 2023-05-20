@@ -23,12 +23,12 @@ fn is_incomplete(line: &str) -> bool {
     Operator::STR_TO_OPERATOR
         .iter()
         .map(|t| t.0)
-        .any(|operator| !"[]()".contains(operator) && line.ends_with(operator)) 
+        .any(|operator| !"[]()".contains(operator) && line.ends_with(operator))
 }
 
 /// Makes a simple iterator of `&str`s into `LineTokens`, which are then consumed and turned into `BasicStatement`s by other functions.
 /// 
-/// 
+/// New: Automatically detects incomplete lines and adds in the next line to complete them until they form a coherent statement.
 fn parse_lines(lines: &mut dyn Iterator<Item = &str>) -> LineToken {
     let mut line_tokens: Vec<LineToken> = Vec::new();
 
